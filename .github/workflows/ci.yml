@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  arm-image:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v5
+
+      - name: Build the ARM image
+        run: docker build --platform linux/arm64 -t procure-pay:ci .
+
+      - name: Check the image is ARM
+        run: test "$(docker image inspect procure-pay:ci --format '{{.Architecture}}')" = "arm64"
+
+      - name: Run the tests inside the image
+        run: docker run --rm procure-pay:ci pytest
