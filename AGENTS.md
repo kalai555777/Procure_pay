@@ -29,6 +29,8 @@ Current milestone: M1, the walking skeleton on AWS (Chapter 19.5).
 
 - Style and lint: Ruff, with the rules in pyproject.toml. Functions stay
   simple (complexity 10 or less).
+- Docstrings: public code in src has Google-style docstrings (Ruff D rules;
+  tests are excluded).
 - Types: mypy in strict mode on all of src and tests, with the Pydantic
   plugin. Never loosen strict mode. A third-party library without type
   information gets a per-module `ignore_missing_imports` override only.
@@ -41,6 +43,13 @@ Current milestone: M1, the walking skeleton on AWS (Chapter 19.5).
   old (`exclude-newer` in pyproject.toml). An `exclude-newer-package`
   exception is only for a real security fix, with the reason in the pull
   request.
+- Pinning: GitHub Actions are pinned by commit SHA with a version comment
+  (`uses: owner/action@<SHA> # vX.Y.Z`); images are pinned by tag@digest.
+  These are checked by hand for the 7-day rule.
+- Audit: pip-audit runs in CI on the locked dependencies.
+- Pull requests: the title follows Conventional Commits as
+  `type: description (M1-NN)`. Merging is squash only, so the title becomes
+  the commit on main.
 
 ## Before saying a task is done, run
 
