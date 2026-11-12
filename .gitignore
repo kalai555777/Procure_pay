@@ -19,3 +19,7 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+# Coverage data (rebuilt on every test run)
+.coverage
+.coverage.*
+htmlcov/

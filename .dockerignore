@@ -21,3 +21,6 @@
 dist
 build
 *.egg-info
+.coverage
+.coverage.*
+htmlcov/
