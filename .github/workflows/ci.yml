@@ -53,10 +53,24 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Build the ARM image
-        run: docker build --platform linux/arm64 -t procure-pay:ci .
+        run: docker build --platform linux/arm64 -t procure-pay:ci -t procure-pay:dev .
 
       - name: Check the image is ARM
         run: test "$(docker image inspect procure-pay:ci --format '{{.Architecture}}')" = "arm64"
 
-      - name: Run the tests with coverage inside the image
-        run: docker run --rm -e COVERAGE_FILE=/tmp/.coverage procure-pay:ci pytest
+      - name: Write this run's .env with a random password
+        run: |
+          password="$(openssl rand -hex 24)"
+          echo "::add-mask::$password"
+          {
+            echo "POSTGRES_USER=clearbuy"
+            echo "POSTGRES_PASSWORD=$password"
+            echo "POSTGRES_DB=clearbuy"
+          } > .env
+
+      - name: Run the tests through Docker Compose
+        run: docker compose run --rm -e COVERAGE_FILE=/tmp/.coverage api pytest
+
+      - name: Stop the containers
+        if: always()
+        run: docker compose down
