@@ -1,12 +1,8 @@
 """Tests that the migrations build Clearbuy's tables from an empty database."""
 
-import uuid
-from collections.abc import Iterator
-
-import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect
 
 from procure_pay import db
 
@@ -16,29 +12,6 @@ EXPECTED_TABLES = {
     "tasks.purchases",
     "tasks.tasks",
 }
-
-
-@pytest.fixture
-def empty_database(monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
-    name = f"migration_test_{uuid.uuid4().hex[:8]}"
-    admin = db.create_app_engine(db.load_settings()).execution_options(
-        isolation_level="AUTOCOMMIT"
-    )
-    with admin.connect() as connection:
-        connection.execute(text(f'CREATE DATABASE "{name}"'))
-    monkeypatch.setenv("DATABASE_NAME", name)
-    try:
-        yield name
-    finally:
-        with admin.connect() as connection:
-            connection.execute(text(f'DROP DATABASE "{name}" WITH (FORCE)'))
-        admin.dispose()
-
-
-def _alembic_config() -> Config:
-    config = Config()
-    config.set_main_option("script_location", "migrations")
-    return config
 
 
 def _clearbuy_tables() -> set[str]:
@@ -56,11 +29,12 @@ def _clearbuy_tables() -> set[str]:
         engine.dispose()
 
 
-def test_migrations_run_from_an_empty_database(empty_database: str) -> None:
-    config = _alembic_config()
-    command.upgrade(config, "head")
+def test_migrations_run_from_an_empty_database(
+    empty_database: str, alembic_cfg: Config
+) -> None:
+    command.upgrade(alembic_cfg, "head")
     assert _clearbuy_tables() == EXPECTED_TABLES
-    command.downgrade(config, "base")
+    command.downgrade(alembic_cfg, "base")
     assert _clearbuy_tables() == set()
-    command.upgrade(config, "head")
+    command.upgrade(alembic_cfg, "head")
     assert _clearbuy_tables() == EXPECTED_TABLES
