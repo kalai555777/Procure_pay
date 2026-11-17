@@ -1,8 +1,14 @@
 """The Clearbuy API: the FastAPI application and its routes."""
 
 from fastapi import FastAPI
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+from procure_pay.tracing import setup_tracing
+
+setup_tracing()
 
 app = FastAPI(title="Clearbuy")
+FastAPIInstrumentor.instrument_app(app)
 
 
 @app.get("/health")
