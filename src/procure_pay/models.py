@@ -61,6 +61,7 @@ class Purchase(Base):
     purchase_number: Mapped[str] = mapped_column(String(20), primary_key=True)
     requester: Mapped[str] = mapped_column(String(64))
     request_details: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    stage: Mapped[str] = mapped_column(String(3))
     status: Mapped[str] = mapped_column(String(32))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

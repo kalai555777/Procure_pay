@@ -21,7 +21,7 @@ def _task(tenant_id: str, task_id: str, purchase_number: str | None) -> Task:
         task_id=task_id,
         purchase_number=purchase_number,
         requester=FIXED_REQUESTER_ID,
-        status="waiting",
+        status="queued",
         trace_id=TRACE_ID,
     )
 
@@ -92,7 +92,8 @@ def test_task_cannot_point_at_another_tenants_purchase(session: Session) -> None
             purchase_number="CB-2001",
             requester=FIXED_REQUESTER_ID,
             request_details=details,
-            status="requested",
+            stage="ST1",
+            status="in_progress",
         )
     )
     session.commit()
