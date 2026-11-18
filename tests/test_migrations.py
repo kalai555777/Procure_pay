@@ -2,7 +2,7 @@
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 from procure_pay import db
 
@@ -38,3 +38,13 @@ def test_migrations_run_from_an_empty_database(
     assert _clearbuy_tables() == set()
     command.upgrade(alembic_cfg, "head")
     assert _clearbuy_tables() == EXPECTED_TABLES
+    engine = db.create_app_engine(db.load_settings())
+    try:
+        version = (
+            engine.connect()
+            .execute(text("SELECT version_num FROM migrations.alembic_version"))
+            .scalar_one()
+        )
+    finally:
+        engine.dispose()
+    assert version == "babd39dc4ca6"
