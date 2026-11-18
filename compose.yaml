@@ -24,6 +24,12 @@ services:
   api:
     build: .
     image: procure-pay:dev
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      DATABASE_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
