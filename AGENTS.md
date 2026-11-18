@@ -57,7 +57,12 @@ Current milestone: M1, the walking skeleton on AWS (Chapter 19.5).
     uv run ruff format --check .
     uv run ruff check .
     uv run mypy
-    uv run pytest
+    uv run pip-audit
+    docker compose run --build --rm -e COVERAGE_FILE=/tmp/.coverage api pytest
+    docker compose down
+
+The tests need the `db` service, so they run inside Docker Compose;
+`uv run pytest` on its own fails outside it. Docker Desktop must be running.
 
 ## Never
 
