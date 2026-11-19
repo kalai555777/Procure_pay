@@ -6,7 +6,7 @@ from typing import Any
 
 from psycopg import Connection
 from psycopg.conninfo import make_conninfo
-from psycopg.rows import TupleRow
+from psycopg.rows import DictRow, dict_row
 from psycopg_pool import ConnectionPool
 from sqlalchemy import URL, create_engine, event
 from sqlalchemy.engine import Dialect, Engine
@@ -78,13 +78,21 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
 
 
 def _checkpoint_connect_kwargs() -> dict[str, Any]:
-    """Return the per-connection settings for the checkpoint pool."""
-    return {"password": get_password()}
+    """Return the per-connection settings for the checkpoint pool.
+
+    LangGraph's saver needs autocommit, so each checkpoint is saved at once,
+    and dict rows, because it reads columns by name.
+    """
+    return {
+        "password": get_password(),
+        "autocommit": True,
+        "row_factory": dict_row,
+    }
 
 
 def create_checkpoint_pool(
     settings: DatabaseSettings,
-) -> ConnectionPool[Connection[TupleRow]]:
+) -> ConnectionPool[Connection[DictRow]]:
     """Create psycopg's pool for LangGraph's checkpoint saver."""
     conninfo = make_conninfo(
         host=settings.host,
@@ -94,6 +102,7 @@ def create_checkpoint_pool(
     )
     return ConnectionPool(
         conninfo,
+        connection_class=Connection[DictRow],
         kwargs=_checkpoint_connect_kwargs,
         min_size=1,
         max_size=4,
