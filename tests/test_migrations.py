@@ -8,10 +8,16 @@ from procure_pay import db
 
 EXPECTED_TABLES = {
     "settings.tenants",
+    "tasks.checkpoint_blobs",
+    "tasks.checkpoint_migrations",
+    "tasks.checkpoint_writes",
+    "tasks.checkpoints",
+    "tasks.claims",
     "tasks.purchase_counters",
     "tasks.purchases",
     "tasks.tasks",
 }
+HEAD = "47ea77b4ef4c"
 
 
 def _clearbuy_tables() -> set[str]:
@@ -29,11 +35,20 @@ def _clearbuy_tables() -> set[str]:
         engine.dispose()
 
 
+def _public_tables() -> list[str]:
+    engine = db.create_app_engine(db.load_settings())
+    try:
+        return inspect(engine).get_table_names(schema="public")
+    finally:
+        engine.dispose()
+
+
 def test_migrations_run_from_an_empty_database(
     empty_database: str, alembic_cfg: Config
 ) -> None:
     command.upgrade(alembic_cfg, "head")
     assert _clearbuy_tables() == EXPECTED_TABLES
+    assert _public_tables() == []
     command.downgrade(alembic_cfg, "base")
     assert _clearbuy_tables() == set()
     command.upgrade(alembic_cfg, "head")
@@ -47,4 +62,11 @@ def test_migrations_run_from_an_empty_database(
         )
     finally:
         engine.dispose()
-    assert version == "babd39dc4ca6"
+    assert version == HEAD
+
+
+def test_autogenerate_finds_no_changes(
+    empty_database: str, alembic_cfg: Config
+) -> None:
+    command.upgrade(alembic_cfg, "head")
+    command.check(alembic_cfg)

@@ -11,6 +11,12 @@ from procure_pay.models import Base
 
 VERSION_SCHEMA = "migrations"
 OWNED_SCHEMAS = {"tasks", "settings"}
+LANGGRAPH_TABLES = {
+    "checkpoint_migrations",
+    "checkpoints",
+    "checkpoint_blobs",
+    "checkpoint_writes",
+}
 
 config = context.config
 if config.config_file_name is not None:
@@ -18,9 +24,17 @@ if config.config_file_name is not None:
 
 
 def include_name(name: str | None, type_: str, parent_names: Any) -> bool:
-    """Compare only Clearbuy's own schemas when drafting a migration."""
+    """Compare only Clearbuy's own schemas and tables when drafting a migration.
+
+    LangGraph's checkpoint tables are made by its own setup (job 4), so
+    autogenerate never offers to change or drop them.
+    """
     if type_ == "schema":
         return name in OWNED_SCHEMAS
+    if type_ == "table":
+        return not (
+            parent_names.get("schema_name") == "tasks" and name in LANGGRAPH_TABLES
+        )
     return True
 
 
@@ -37,6 +51,7 @@ def run_migrations_online() -> None:
                 include_schemas=True,
                 include_name=include_name,
                 version_table_schema=VERSION_SCHEMA,
+                transaction_per_migration=True,
             )
             with context.begin_transaction():
                 context.run_migrations()

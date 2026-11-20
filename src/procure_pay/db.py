@@ -99,6 +99,8 @@ def create_checkpoint_pool(
         port=str(settings.port),
         dbname=settings.name,
         user=settings.user,
+        # LangGraph tables live in the tasks schema (Chapter 17.2).
+        options="-c search_path=tasks",
     )
     return ConnectionPool(
         conninfo,

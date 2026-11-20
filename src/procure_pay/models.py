@@ -103,3 +103,27 @@ class Task(Base):
     )
 
     __mapper_args__ = {"version_id_col": version}
+
+
+class Claim(Base):
+    """A worker's time-limited hold on one task, such as CB-3105-T01."""
+
+    __tablename__ = "claims"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "task_id"],
+            ["tasks.tasks.tenant_id", "tasks.tasks.task_id"],
+            ondelete="RESTRICT",
+        ),
+        {"schema": "tasks"},
+    )
+
+    tenant_id: Mapped[str] = mapped_column(
+        String(12), ForeignKey(TENANT_FK, ondelete="RESTRICT"), primary_key=True
+    )
+    task_id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    worker_id: Mapped[str] = mapped_column(String(128))
+    claimed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

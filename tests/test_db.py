@@ -52,5 +52,7 @@ def test_checkpoint_pool_gives_langgraph_settings() -> None:
             assert conn.autocommit is True
             row = conn.execute("SELECT 1 AS answer").fetchone()
             assert row == {"answer": 1}
+            path = conn.execute("SHOW search_path").fetchone()
+            assert path == {"search_path": "tasks"}
     finally:
         pool.close()
