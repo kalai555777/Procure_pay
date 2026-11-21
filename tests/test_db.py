@@ -44,11 +44,15 @@ def test_session_factory_gives_sessions() -> None:
         engine.dispose()
 
 
-def test_checkpoint_pool_connects() -> None:
+def test_checkpoint_pool_gives_langgraph_settings() -> None:
     pool = db.create_checkpoint_pool(db.load_settings())
     pool.open(wait=True, timeout=10)
     try:
-        with pool.connection() as connection:
-            assert connection.execute("SELECT 1").fetchone() == (1,)
+        with pool.connection() as conn:
+            assert conn.autocommit is True
+            row = conn.execute("SELECT 1 AS answer").fetchone()
+            assert row == {"answer": 1}
+            path = conn.execute("SHOW search_path").fetchone()
+            assert path == {"search_path": "tasks"}
     finally:
         pool.close()
