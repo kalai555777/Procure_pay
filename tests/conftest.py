@@ -10,6 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from procure_pay import db
+from procure_pay.models import Purchase, Task, Tenant
 
 
 @pytest.fixture
@@ -50,3 +51,34 @@ def session(migrated_database: str) -> Iterator[Session]:
             yield test_session
     finally:
         engine.dispose()
+
+
+REQUESTER = "6f1c2e9a-3b7d-4e2a-9c5f-0d8b7a1e4c23"
+
+
+@pytest.fixture
+def queued_task(session: Session) -> Task:
+    session.add(Tenant(tenant_id="t-kabtest001", name="KAB Company"))
+    session.flush()
+    session.add(
+        Purchase(
+            tenant_id="t-kabtest001",
+            purchase_number="CB-3105",
+            requester=REQUESTER,
+            request_details={"summary": "Renew Solid licences"},
+            stage="ST1",
+            status="in_progress",
+        )
+    )
+    session.flush()
+    task = Task(
+        tenant_id="t-kabtest001",
+        task_id="CB-3105-T01",
+        purchase_number="CB-3105",
+        requester=REQUESTER,
+        status="queued",
+        trace_id="4bf92f3577b34da6a3ce929d0e0e4736",
+    )
+    session.add(task)
+    session.commit()
+    return task
