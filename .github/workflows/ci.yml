@@ -69,7 +69,8 @@ jobs:
           } > .env
 
       - name: Run the tests through Docker Compose
-        run: docker compose run --rm -e COVERAGE_FILE=/tmp/.coverage api pytest
+        # Any other container CI starts through Compose needs -e APP_ENV=ci too.
+        run: docker compose run --rm -e APP_ENV=ci -e COVERAGE_FILE=/tmp/.coverage api pytest
 
       - name: Stop the containers
         if: always()

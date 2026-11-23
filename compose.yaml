@@ -10,6 +10,7 @@ x-app-environment: &app-environment
   DATABASE_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
   DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
   LANGGRAPH_STRICT_MSGPACK: "true"
+  APP_ENV: "local"
 
 services:
   db:

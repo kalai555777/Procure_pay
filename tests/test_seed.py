@@ -60,21 +60,6 @@ def test_seed_refuses_two_tenants_with_the_same_name(session: Session) -> None:
         seed.seed(session)
 
 
-def test_main_refuses_in_live(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("APP_ENV", "live")
-    with pytest.raises(seed.SeedError):
-        seed.main()
-
-
-def test_main_seeds_the_configured_database(
-    migrated_database: str, capsys: pytest.CaptureFixture[str]
-) -> None:
-    seed.main()
-    printed = capsys.readouterr().out
-    assert "KAB Company: t-" in printed
-    assert "Test Co.: t-" in printed
-
-
 def test_task_cannot_name_a_missing_tenant(session: Session) -> None:
     seed.seed(session)
     session.add(_task("t-zzzzzzzzzz", "TK-0001", None))
@@ -101,3 +86,36 @@ def test_task_cannot_point_at_another_tenants_purchase(session: Session) -> None
     with pytest.raises(IntegrityError):
         session.commit()
     session.rollback()
+
+
+@pytest.mark.parametrize("app_env", seed.SEED_ENVIRONMENTS)
+def test_main_seeds_in_each_allowed_environment(
+    app_env: str,
+    migrated_database: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv("APP_ENV", app_env)
+    seed.main()
+    printed = capsys.readouterr().out
+    assert "KAB Company: t-" in printed
+    assert "Test Co.: t-" in printed
+
+
+@pytest.mark.parametrize(
+    "app_env",
+    [
+        pytest.param(None, id="missing"),
+        pytest.param("live", id="live"),
+        pytest.param("lvie", id="typo"),
+    ],
+)
+def test_main_refuses_outside_the_allowed_environments(
+    app_env: str | None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    if app_env is None:
+        monkeypatch.delenv("APP_ENV", raising=False)
+    else:
+        monkeypatch.setenv("APP_ENV", app_env)
+    with pytest.raises(seed.SeedError, match="local, ci, test"):
+        seed.main()

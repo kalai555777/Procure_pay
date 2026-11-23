@@ -1,7 +1,8 @@
-"""Seed the test tenants and their purchase counters (never in live).
+"""Seed the test tenants and their purchase counters (local, ci, and test only).
 
 Run with ``python -m procure_pay.seed``. Safe to rerun: it adds only what
-is missing and never changes an existing counter.
+is missing and never changes an existing counter. It refuses to run unless
+``APP_ENV`` is one of ``SEED_ENVIRONMENTS``.
 """
 
 import os
@@ -16,6 +17,7 @@ from procure_pay.fixed_identity import FIXED_TENANT_NAME
 from procure_pay.models import PurchaseCounter, Tenant
 
 SEED_TENANTS = {FIXED_TENANT_NAME: 3105, "Test Co.": 2001}
+SEED_ENVIRONMENTS = ("local", "ci", "test")
 _ID_ALPHABET = string.ascii_lowercase + string.digits
 
 
@@ -51,9 +53,11 @@ def seed(session: Session) -> dict[str, str]:
 
 
 def main() -> None:
-    """Run the seed against the configured database, refusing in live."""
-    if os.environ.get("APP_ENV") == "live":
-        raise SeedError("The seed never runs when APP_ENV is live")
+    """Run the seed against the configured database, only in an allowed APP_ENV."""
+    app_env = os.environ.get("APP_ENV")
+    if app_env not in SEED_ENVIRONMENTS:
+        allowed = ", ".join(SEED_ENVIRONMENTS)
+        raise SeedError(f"The seed runs only when APP_ENV is one of: {allowed}")
     engine = db.create_app_engine(db.load_settings())
     try:
         with db.create_session_factory(engine)() as session:
