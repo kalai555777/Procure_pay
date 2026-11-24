@@ -1,18 +1,21 @@
 """Clearbuy's one error format (AD-065): reason code, safe message, request ID."""
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from http import HTTPStatus
 from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from procure_pay import tracing
 
 logger = logging.getLogger(__name__)
 
 INTERNAL_ERROR_MESSAGE = "Something went wrong. Quote the request ID if you report it."
+FRAMEWORK_ERROR_CODES = {404: "not_found", 405: "method_not_allowed"}
 
 
 class ClearbuyError(Exception):
@@ -34,12 +37,17 @@ def current_request_id() -> str | None:
         return None
 
 
-def error_response(code: str, message: str, status_code: int) -> JSONResponse:
-    """Build a reply in the shared error format."""
+def error_response(
+    code: str,
+    message: str,
+    status_code: int,
+    headers: Mapping[str, str] | None = None,
+) -> JSONResponse:
+    """Build a reply in the shared error format, with any headers to pass on."""
     body = {
         "error": {"code": code, "message": message, "request_id": current_request_id()}
     }
-    return JSONResponse(status_code=status_code, content=body)
+    return JSONResponse(status_code=status_code, content=body, headers=headers)
 
 
 def safe_validation_message(errors: Sequence[Any]) -> str:
@@ -80,8 +88,17 @@ def _handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
     return error_response("internal_error", INTERNAL_ERROR_MESSAGE, 500)
 
 
+def _handle_framework_error(request: Request, exc: Exception) -> JSONResponse:
+    if isinstance(exc, StarletteHTTPException):
+        code = FRAMEWORK_ERROR_CODES.get(exc.status_code, "http_error")
+        phrase = HTTPStatus(exc.status_code).phrase
+        return error_response(code, phrase, exc.status_code, headers=exc.headers)
+    return _handle_unexpected_error(request, exc)
+
+
 def install_error_handlers(app: FastAPI) -> None:
     """Send every refusal through the shared error format."""
     app.add_exception_handler(ClearbuyError, _handle_clearbuy_error)
     app.add_exception_handler(RequestValidationError, _handle_validation_error)
+    app.add_exception_handler(StarletteHTTPException, _handle_framework_error)
     app.add_exception_handler(Exception, _handle_unexpected_error)
