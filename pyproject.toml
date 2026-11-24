@@ -45,7 +45,7 @@ max-complexity = 10
 
 [tool.mypy]
 strict = true
-files = ["src", "tests"]
+files = ["src", "tests", "migrations"]
 plugins = ["pydantic.mypy"]
 
 [tool.uv]
