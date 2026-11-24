@@ -54,6 +54,7 @@ exclude-newer = "7 days"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=procure_pay --cov-report=term-missing --cov-fail-under=80"
+filterwarnings = ["ignore::DeprecationWarning:langsmith[.]"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
