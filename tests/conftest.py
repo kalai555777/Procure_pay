@@ -6,11 +6,16 @@ from collections.abc import Iterator
 import pytest
 from alembic import command
 from alembic.config import Config
+from fastapi.testclient import TestClient
+from langgraph.checkpoint.postgres import PostgresSaver
 from sqlalchemy import text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
-from procure_pay import db
+from procure_pay import db, seed, worker
+from procure_pay.graph import build_graph
+from procure_pay.main import app
 from procure_pay.models import Purchase, Task, Tenant
+from procure_pay.purchases import get_session
 
 
 @pytest.fixture
@@ -82,3 +87,45 @@ def queued_task(session: Session) -> Task:
     session.add(task)
     session.commit()
     return task
+
+
+@pytest.fixture
+def client(migrated_database: str) -> Iterator[TestClient]:
+    engine = db.create_app_engine(db.load_settings())
+    factory = db.create_session_factory(engine)
+
+    def _test_session() -> Iterator[Session]:
+        with factory() as request_session:
+            yield request_session
+
+    app.dependency_overrides[get_session] = _test_session
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.clear()
+        engine.dispose()
+
+
+@pytest.fixture
+def seeded_client(client: TestClient, session: Session) -> TestClient:
+    seed.seed(session)
+    return client
+
+
+@pytest.fixture
+def session_factory(migrated_database: str) -> Iterator[sessionmaker[Session]]:
+    engine = db.create_app_engine(db.load_settings())
+    try:
+        yield db.create_session_factory(engine)
+    finally:
+        engine.dispose()
+
+
+@pytest.fixture
+def graph(migrated_database: str) -> Iterator[worker.StubGraph]:
+    pool = db.create_checkpoint_pool(db.load_settings())
+    pool.open(wait=True, timeout=10)
+    try:
+        yield build_graph(PostgresSaver(pool))
+    finally:
+        pool.close()
