@@ -11,6 +11,8 @@ x-app-environment: &app-environment
   DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
   LANGGRAPH_STRICT_MSGPACK: "true"
   APP_ENV: "local"
+  LANGSMITH_TRACING_V2: "false"
+  LANGSMITH_TRACING: "false"
 
 services:
   db:
