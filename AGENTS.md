@@ -53,13 +53,12 @@ Current milestone: M1, the walking skeleton on AWS (Chapter 19.5).
 
 ## Before saying a task is done, run
 
-    uv lock --check
-    uv run ruff format --check .
-    uv run ruff check .
-    uv run mypy
-    uv run pip-audit
-    docker compose run --build --rm -e COVERAGE_FILE=/tmp/.coverage api pytest
-    docker compose down
+    scripts/check.sh
+
+It runs CI's checks in CI's order (its opening comment lists them) and always
+ends with `docker compose down`. CI keeps its own steps: a change to
+`scripts/check.sh` or `.github/workflows/ci.yml` changes both in the same pull
+request.
 
 The tests need the `db` service, so they run inside Docker Compose;
 `uv run pytest` on its own fails outside it. Docker Desktop must be running.

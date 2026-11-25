@@ -6,12 +6,10 @@ import time
 from collections.abc import Iterator
 
 import pytest
-from langgraph.checkpoint.postgres import PostgresSaver
 from sqlalchemy import text
 from sqlalchemy.orm import Session, sessionmaker
 
-from procure_pay import db, worker
-from procure_pay.graph import build_graph
+from procure_pay import worker
 from procure_pay.models import Claim, Task
 from procure_pay.task_updates import COMPLETED, RUNNING
 
@@ -25,25 +23,6 @@ def restore_signal_handlers() -> Iterator[None]:
     yield
     for sig, handler in saved.items():
         signal.signal(sig, handler)
-
-
-@pytest.fixture
-def session_factory(migrated_database: str) -> Iterator[sessionmaker[Session]]:
-    engine = db.create_app_engine(db.load_settings())
-    try:
-        yield db.create_session_factory(engine)
-    finally:
-        engine.dispose()
-
-
-@pytest.fixture
-def graph(migrated_database: str) -> Iterator[worker.StubGraph]:
-    pool = db.create_checkpoint_pool(db.load_settings())
-    pool.open(wait=True, timeout=10)
-    try:
-        yield build_graph(PostgresSaver(pool))
-    finally:
-        pool.close()
 
 
 def test_nothing_queued_means_no_work(

@@ -45,7 +45,7 @@ max-complexity = 10
 
 [tool.mypy]
 strict = true
-files = ["src", "tests"]
+files = ["src", "tests", "migrations"]
 plugins = ["pydantic.mypy"]
 
 [tool.uv]
@@ -54,6 +54,7 @@ exclude-newer = "7 days"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=procure_pay --cov-report=term-missing --cov-fail-under=80"
+filterwarnings = ["ignore::DeprecationWarning:langsmith[.]"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

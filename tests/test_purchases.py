@@ -2,18 +2,13 @@
 
 import re
 import uuid
-from collections.abc import Iterator
 
-import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from procure_pay import db, seed
 from procure_pay.fixed_identity import FIXED_REQUESTER_ID
-from procure_pay.main import app
 from procure_pay.models import Purchase, PurchaseCounter, Task
-from procure_pay.purchases import get_session
 
 BODY = {"summary": "Renew the Solid design licence for 12 seats"}
 URL = "/v1/purchases"
@@ -22,29 +17,6 @@ REQUEST_ID = re.compile(r"req-[0-9a-f]{16}")
 
 def _headers(key: str | None = None) -> dict[str, str]:
     return {"Idempotency-Key": key or str(uuid.uuid4())}
-
-
-@pytest.fixture
-def client(migrated_database: str) -> Iterator[TestClient]:
-    engine = db.create_app_engine(db.load_settings())
-    factory = db.create_session_factory(engine)
-
-    def _test_session() -> Iterator[Session]:
-        with factory() as request_session:
-            yield request_session
-
-    app.dependency_overrides[get_session] = _test_session
-    try:
-        yield TestClient(app)
-    finally:
-        app.dependency_overrides.clear()
-        engine.dispose()
-
-
-@pytest.fixture
-def seeded_client(client: TestClient, session: Session) -> TestClient:
-    seed.seed(session)
-    return client
 
 
 def test_submit_saves_cb_3105_and_its_task(
