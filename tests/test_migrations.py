@@ -17,7 +17,7 @@ EXPECTED_TABLES = {
     "tasks.purchases",
     "tasks.tasks",
 }
-HEAD = "47ea77b4ef4c"
+HEAD = "f0be2caa233c"
 
 
 def _clearbuy_tables() -> set[str]:
@@ -44,7 +44,7 @@ def _public_tables() -> list[str]:
 
 
 def test_migrations_run_from_an_empty_database(
-    empty_database: str, alembic_cfg: Config
+    empty_database_as_owner: str, alembic_cfg: Config
 ) -> None:
     command.upgrade(alembic_cfg, "head")
     assert _clearbuy_tables() == EXPECTED_TABLES
@@ -66,7 +66,7 @@ def test_migrations_run_from_an_empty_database(
 
 
 def test_autogenerate_finds_no_changes(
-    empty_database: str, alembic_cfg: Config
+    empty_database_as_owner: str, alembic_cfg: Config
 ) -> None:
     command.upgrade(alembic_cfg, "head")
     command.check(alembic_cfg)

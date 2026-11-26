@@ -1,5 +1,9 @@
 # Clearbuy on the laptop: PostgreSQL, the API, and the worker.
 # Settings come from .env (copy .env.example). Start: docker compose up --build
+# First run on a new database (the tools profile; up never starts these):
+#   docker compose run --rm setup        # roles and Example Co.'s database
+#   docker compose run --rm migrate      # migrations as clearbuy_owner
+#   docker compose run --rm migrate python -m procure_pay.seed
 
 name: procure-pay
 
@@ -7,8 +11,6 @@ x-app-environment: &app-environment
   DATABASE_HOST: db
   DATABASE_PORT: "5432"
   DATABASE_NAME: ${POSTGRES_DB:?set POSTGRES_DB in .env}
-  DATABASE_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
-  DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
   LANGGRAPH_STRICT_MSGPACK: "true"
   APP_ENV: "local"
   LANGSMITH_TRACING_V2: "false"
@@ -35,7 +37,10 @@ services:
   api:
     build: .
     image: procure-pay:dev
-    environment: *app-environment
+    environment:
+      <<: *app-environment
+      DATABASE_USER: clearbuy_tasks
+      DATABASE_PASSWORD: ${CLEARBUY_TASKS_PASSWORD:?set CLEARBUY_TASKS_PASSWORD in .env}
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -56,7 +61,57 @@ services:
     build: .
     image: procure-pay:dev
     command: ["python", "-m", "procure_pay.worker"]
-    environment: *app-environment
+    environment:
+      <<: *app-environment
+      DATABASE_USER: clearbuy_tasks
+      DATABASE_PASSWORD: ${CLEARBUY_TASKS_PASSWORD:?set CLEARBUY_TASKS_PASSWORD in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  setup:
+    build: .
+    image: procure-pay:dev
+    profiles: [tools]
+    command: ["python", "-m", "procure_pay.setup_database"]
+    environment:
+      <<: *app-environment
+      DATABASE_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      CLEARBUY_OWNER_PASSWORD: ${CLEARBUY_OWNER_PASSWORD:?set CLEARBUY_OWNER_PASSWORD in .env}
+      CLEARBUY_TASKS_PASSWORD: ${CLEARBUY_TASKS_PASSWORD:?set CLEARBUY_TASKS_PASSWORD in .env}
+      CLEARBUY_SETTINGS_PASSWORD: ${CLEARBUY_SETTINGS_PASSWORD:?set CLEARBUY_SETTINGS_PASSWORD in .env}
+      CLEARBUY_EXAMPLE_PASSWORD: ${CLEARBUY_EXAMPLE_PASSWORD:?set CLEARBUY_EXAMPLE_PASSWORD in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  migrate:
+    build: .
+    image: procure-pay:dev
+    profiles: [tools]
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      <<: *app-environment
+      DATABASE_USER: clearbuy_owner
+      DATABASE_PASSWORD: ${CLEARBUY_OWNER_PASSWORD:?set CLEARBUY_OWNER_PASSWORD in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  tests:
+    build: .
+    image: procure-pay:dev
+    profiles: [tools]
+    command: ["pytest"]
+    environment:
+      <<: *app-environment
+      DATABASE_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      CLEARBUY_OWNER_PASSWORD: ${CLEARBUY_OWNER_PASSWORD:?set CLEARBUY_OWNER_PASSWORD in .env}
+      CLEARBUY_TASKS_PASSWORD: ${CLEARBUY_TASKS_PASSWORD:?set CLEARBUY_TASKS_PASSWORD in .env}
+      CLEARBUY_SETTINGS_PASSWORD: ${CLEARBUY_SETTINGS_PASSWORD:?set CLEARBUY_SETTINGS_PASSWORD in .env}
+      CLEARBUY_EXAMPLE_PASSWORD: ${CLEARBUY_EXAMPLE_PASSWORD:?set CLEARBUY_EXAMPLE_PASSWORD in .env}
     depends_on:
       db:
         condition: service_healthy

@@ -58,7 +58,7 @@ jobs:
       - name: Check the image is ARM
         run: test "$(docker image inspect procure-pay:ci --format '{{.Architecture}}')" = "arm64"
 
-      - name: Write this run's .env with a random password
+      - name: Write this run's .env with random passwords
         run: |
           password="$(openssl rand -hex 24)"
           echo "::add-mask::$password"
@@ -67,10 +67,16 @@ jobs:
             echo "POSTGRES_PASSWORD=$password"
             echo "POSTGRES_DB=clearbuy"
           } > .env
+          for name in CLEARBUY_OWNER_PASSWORD CLEARBUY_TASKS_PASSWORD \
+            CLEARBUY_SETTINGS_PASSWORD CLEARBUY_EXAMPLE_PASSWORD; do
+            value="$(openssl rand -hex 24)"
+            echo "::add-mask::$value"
+            echo "$name=$value" >> .env
+          done
 
       - name: Run the tests through Docker Compose
         # Any other container CI starts through Compose needs -e APP_ENV=ci too.
-        run: docker compose run --rm -e APP_ENV=ci -e COVERAGE_FILE=/tmp/.coverage api pytest
+        run: docker compose run --rm -e APP_ENV=ci -e COVERAGE_FILE=/tmp/.coverage tests pytest
 
       - name: Stop the containers
         if: always()
